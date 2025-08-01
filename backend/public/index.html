@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strava GPX Matcher Frontend</title>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 1rem;
+    }
+
+    #app,
+    #auth {
+      max-width: 600px;
+      margin: auto;
+    }
+
+    .controls>* {
+      margin-right: 0.5rem;
+    }
+
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-left-color: #09f;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    #map-container {
+      position: relative;
+      margin-top: 1rem;
+      height: 400px;
+    }
+
+    #map {
+      height: 100%;
+    }
+
+    .overlay-spinner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="auth">
+    <h2>Authenticate with Strava</h2>
+    <button id="loginBtn">Login with Strava</button>
+  </div>
+
+  <div id="app" style="display: none;">
+    <div class="controls">
+      <label>Year:
+        <select id="yearInput"></select>
+      </label>
+      <label>Month:
+        <select id="monthInput"></select>
+      </label>
+      <button id="loadBtn">Load Activities</button>
+      <button id="refreshBtn">Refresh Cache</button>
+      <span id="loadSpinner" class="spinner" style="display:none;"></span>
+    </div>
+    <div class="controls" style="margin-top: 1rem;">
+      <label>Activities:
+        <select id="activitySelect">
+          <option value="">-- Select activity --</option>
+        </select>
+      </label>
+      <span id="matchSpinner" class="spinner" style="display:none;"></span>
+    </div>
+    <div class="controls" style="margin-top:1rem;">
+      <label>Upload GPX file:
+        <input type="file" id="gpxFile" accept=".gpx" />
+      </label>
+      <button id="uploadMatchBtn">Match GPX</button>
+    </div>
+    <div id="matchResult" style="margin-top: 1rem;"></div>
+    <div id="map-container">
+      <div id="map"></div>
+      <div id="mapSpinner" class="spinner overlay-spinner" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script>
+    (function () {
+      const authDiv = document.getElementById('auth');
+      const appDiv = document.getElementById('app');
+      const loginBtn = document.getElementById('loginBtn');
+      const yearSelect = document.getElementById('yearInput');
+      const monthSelect = document.getElementById('monthInput');
+      const loadBtn = document.getElementById('loadBtn');
+      const refreshBtn = document.getElementById('refreshBtn');
+      const loadSpinner = document.getElementById('loadSpinner');
+      const activitySelect = document.getElementById('activitySelect');
+      const matchSpinner = document.getElementById('matchSpinner');
+      const matchResult = document.getElementById('matchResult');
+      const mapSpinner = document.getElementById('mapSpinner');
+      const gpxInput = document.getElementById('gpxFile');
+      const uploadMatchBtn = document.getElementById('uploadMatchBtn');
+
+      let map, refLayer, actLayer;
+      let athleteId = null;
+
+      function showAuth(show) {
+        authDiv.style.display = show ? 'block' : 'none';
+        appDiv.style.display = show ? 'none' : 'block';
+      }
+      function showLoading(el, show) {
+        el.style.display = show ? 'inline-block' : 'none';
+      }
+      function formatTime(sec) {
+        const h = Math.floor(sec / 3600),
+          m = Math.floor((sec % 3600) / 60),
+          s = sec % 60;
+        return (h > 0 ? h + ':' : '') +
+          String(m).padStart(2, '0') + ':' +
+          String(s).padStart(2, '0');
+      }
+      function initMap() {
+        map = L.map('map');
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+      }
+      function renderMap(refPts, actPts) {
+        showLoading(mapSpinner, true);
+        if (refLayer) map.removeLayer(refLayer);
+        if (actLayer) map.removeLayer(actLayer);
+        refLayer = L.polyline(refPts.map(p => [p.lat, p.lon]), { color: 'yellow' }).addTo(map);
+        actLayer = L.polyline(actPts, { color: 'blue' }).addTo(map);
+        const bounds = L.latLngBounds(refLayer.getBounds())
+          .extend(actLayer.getBounds());
+        map.fitBounds(bounds, { padding: [20, 20] });
+        showLoading(mapSpinner, false);
+      }
+
+      // 1) On load, grab athleteId from URL or from localStorage
+      function sessionCheck() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('athleteId')) {
+          athleteId = params.get('athleteId');
+          localStorage.setItem('athleteId', athleteId);
+          // remove it from URL
+          window.history.replaceState({}, '', window.location.pathname);
+        } else {
+          athleteId = localStorage.getItem('athleteId');
+        }
+        if (athleteId) {
+          showAuth(false);
+          initApp();
+        } else {
+          showAuth(true);
+        }
+      }
+
+      function initApp() {
+        initMap();
+        // populate year dropdown
+        const currentYear = new Date().getFullYear();
+        for (let y = currentYear; y >= 2007; y--) {
+          const o = document.createElement('option');
+          o.value = o.textContent = y;
+          yearSelect.appendChild(o);
+        }
+        yearSelect.value = currentYear;
+        // populate month dropdown
+        const thisMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+        for (let m = 1; m <= 12; m++) {
+          const mm = String(m).padStart(2, '0');
+          const o = document.createElement('option');
+          o.value = o.textContent = mm;
+          monthSelect.appendChild(o);
+        }
+        monthSelect.value = thisMonth;
+      }
+
+      function handleUnauth() {
+        localStorage.removeItem('athleteId');
+        sessionCheck();
+      }
+
+      function checkResponse(res) {
+        if (res.status === 401) throw 'unauth';
+        return res.ok ? res.json() : res.text().then(t => { throw t; });
+      }
+
+      async function loadActivities() {
+        const year = yearSelect.value;
+        const month = monthSelect.value;
+        activitySelect.innerHTML = '<option value="">-- Select activity --</option>';
+        matchResult.textContent = '';
+        showLoading(loadSpinner, true);
+        loadBtn.disabled = true;
+        refreshBtn.disabled = true;
+        try {
+          const data = await fetch(
+            `/api/activities?athleteId=${athleteId}&year=${year}&month=${month}`
+          ).then(checkResponse);
+          data.forEach(act => {
+            const o = document.createElement('option');
+            o.value = act.id;
+            const d = new Date(act.start_date).toLocaleDateString();
+            o.textContent = `${d} — ${act.name} (${(act.distance / 1000).toFixed(1)} km)`;
+            activitySelect.appendChild(o);
+          });
+        } catch (e) {
+          if (e === 'unauth') return handleUnauth();
+          alert('Error loading activities');
+        } finally {
+          showLoading(loadSpinner, false);
+          loadBtn.disabled = false;
+          refreshBtn.disabled = false;
+        }
+      }
+
+      async function refreshCache() {
+        const year = yearSelect.value;
+        const month = monthSelect.value;
+        showLoading(loadSpinner, true);
+        refreshBtn.disabled = true;
+        try {
+          await fetch(
+            `/api/activities/cache?athleteId=${athleteId}&year=${year}&month=${month}`,
+            { method: 'DELETE' }
+          );
+          await loadActivities();
+        } catch {
+          alert('Error refreshing cache');
+        } finally {
+          showLoading(loadSpinner, false);
+          refreshBtn.disabled = false;
+        }
+      }
+
+      async function loadMatch(id) {
+        showLoading(matchSpinner, true);
+        activitySelect.disabled = true;
+        try {
+          const res = await fetch(
+            `/api/activities/${id}/match?athleteId=${athleteId}`
+          ).then(checkResponse);
+          matchResult.textContent =
+            `Match: ${res.matchPercentage}% | Time: ${formatTime(res.movingTimeSeconds)}`;
+          renderMap(res.referenceTrack, res.activityTrack);
+        } catch (e) {
+          if (e === 'unauth') return handleUnauth();
+          alert('Error matching activity');
+        } finally {
+          showLoading(matchSpinner, false);
+          activitySelect.disabled = false;
+        }
+      }
+
+      // listeners
+
+      uploadMatchBtn.addEventListener('click', () => {
+        const file = gpxInput.files[0];
+        if (!file) return alert('Please select a GPX file');
+        showLoading(matchSpinner, true);
+        matchResult.textContent = '';
+        // disable UI if you like:
+        uploadMatchBtn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('gpx', file);
+
+        fetch(
+          `/api/upload-match`,
+          { method: 'POST', body: formData }
+        )
+          .then(checkResponse)
+          .then(res => {
+            matchResult.textContent =
+              `Match: ${res.matchPercentage}%` +
+              (res.movingTimeSeconds != null
+                ? ` | Time: ${formatTime(res.movingTimeSeconds)}`
+                : '');
+            renderMap(res.referenceTrack, res.activityTrack);
+          })
+          .catch(err => {
+            if (err.error === 'not_authenticated') {
+              handleAuthError();
+            } else if (err.error === 'invalid_gpx') {
+              alert('That file is not a valid GPX.');
+            } else {
+              alert('Error matching GPX.');
+            }
+          })
+          .finally(() => {
+            showLoading(matchSpinner, false);
+            uploadMatchBtn.disabled = false;
+          });
+      });
+
+      loginBtn.addEventListener('click', () => {
+        // redirect into your Strava OAuth flow, which will eventually
+        // callback with ?athleteId=... on this page
+        window.location.href = '/auth/login';
+      });
+      loadBtn.addEventListener('click', loadActivities);
+      refreshBtn.addEventListener('click', refreshCache);
+      activitySelect.addEventListener('change', e => {
+        if (e.target.value) loadMatch(e.target.value);
+      });
+
+      document.addEventListener('DOMContentLoaded', sessionCheck);
+    })();
+  </script>
+</body>
+
+</html>
