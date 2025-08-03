@@ -6,6 +6,8 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import authRouter from './auth.js';
 import activityRouter from './routes/activityRoutes.js';
+import fameRouter from './routes/fameRoutes.js';
+import submissionRouter from './routes/submissionRoutes.js';
 import uploadRouter from './routes/uploadRoutes.js';
 import adminRouter from './routes/adminRoutes.js';
 import { loadReferencePoints } from './gpxService.js';
@@ -58,6 +60,8 @@ async function start() {
     // 4) Mount routers
     app.use('/auth', authRouter);
     app.use('/api/upload-match', uploadRouter);
+    app.use('/api/fame', fameRouter);
+    app.use('/api/submission', submissionRouter);
     app.use('/api/admin', adminRouter);
     app.use('/api', checkAuth, activityRouter);
     

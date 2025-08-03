@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import db from '../db.js';
+import { query } from '../db.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5*1024*1024 } });
@@ -13,7 +13,7 @@ router.post('/', upload.single('frikadelleImage'), async (req, res) => {
   }
 
   // duplicate check
-  const [rows] = await db.query(
+  const [rows] = await query(
     'SELECT id FROM hall_of_fame WHERE name=? AND activity_date=?',
     [name, activityDate]
   );
@@ -23,7 +23,7 @@ router.post('/', upload.single('frikadelleImage'), async (req, res) => {
 
   // insert
   const imageBuffer = req.file?.buffer || null;
-  await db.query(
+  await query(
     `INSERT INTO hall_of_fame
       (name, activity_date, moving_time_seconds, match_percentage,
        frikadelle_image, frikadelle_eaten, accepted)

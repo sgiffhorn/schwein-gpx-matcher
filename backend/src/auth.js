@@ -57,4 +57,14 @@ router.get('/me', (req, res) => {
     res.status(401).json({ error: 'not_authenticated' });
 });
 
+// POST /auth/logout
+// Deletes the in‐memory token for this athleteId
+router.post('/logout', (req, res) => {
+  const { athleteId } = req.body;
+  if (athleteId && userTokens[athleteId]) {
+    delete userTokens[athleteId];
+  }
+  res.json({ success: true });
+});
+
 export default router;
