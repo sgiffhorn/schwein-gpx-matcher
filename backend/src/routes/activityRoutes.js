@@ -130,13 +130,16 @@ router.get('/activities/:id/match', async (req, res) => {
 
     // 5) % of *reference* covered
     const matchPercentage = (hits / refPoints.length) * 100;
+    const name = userTokens[athleteId]?.name || null;
 
     // 8) Return match %, Strava moving_time, plus both tracks for your map
     res.json({
         matchPercentage: +matchPercentage.toFixed(1),
         movingTimeSeconds: summary.moving_time,
         referenceTrack: refPoints,    // [{lon, lat},…]
-        activityTrack: streams.latlng.data // [{lon, lat},…]
+        activityTrack: streams.latlng.data, // [{lon, lat},…]
+        name,
+        activityDate: summary.start_date,
     });
 });
 

@@ -1,0 +1,17 @@
+# frontend/Dockerfile.dev
+FROM node:20-alpine
+
+WORKDIR /usr/src/app
+
+# Install dependencies
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Copy everything else
+COPY . .
+
+# Expose Vite's default port
+EXPOSE 5173
+
+# Dev command
+CMD ["npm", "run", "dev"]

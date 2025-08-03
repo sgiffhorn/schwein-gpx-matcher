@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  db:
+    image: mariadb:10.9
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "${DB_PORT:-3306}:3306"
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - PMA_HOST=db
+      - PMA_PORT=3306
+      - PMA_USER=${MYSQL_USER}
+      - PMA_PASSWORD=${MYSQL_PASSWORD}
+    depends_on:
+      - db
+    ports:
+      - "${PMA_PORT:-8080}:80"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=${MYSQL_DATABASE}
+      - DB_USER=${MYSQL_USER}
+      - DB_PASSWORD=${MYSQL_PASSWORD}
+      # any other ENV vars your backend needs, e.g.:
+      - STRAVA_CLIENT_ID=${STRAVA_CLIENT_ID}
+      - STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - REFERENCE_GPX_PATH=${REFERENCE_GPX_PATH}
+      - CACHE_TTL=${CACHE_TTL}   # seconds
+      - MIN_DISTANCE_KM=${MIN_DISTANCE_KM}
+      - MATCH_THRESHOLD_M=${MATCH_THRESHOLD_M}
+      - MOVING_SPEED_THRESHOLD_MPS=${MOVING_SPEED_THRESHOLD_MPS}
+      - ADMIN_USER=${ADMIN_USER}
+      - ADMIN_PASS_HASH=${ADMIN_PASS_HASH}
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - db
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+
+volumes:
+  db_data:

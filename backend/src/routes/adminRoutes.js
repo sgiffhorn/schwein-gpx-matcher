@@ -25,9 +25,11 @@ router.post('/login', async (req, res) => {
 // Middleware: protect everything below
 router.use((req, res, next) => {
   const auth = req.headers.authorization?.split(' ')[1];
+  console.log(auth);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const payload = jwt.verify(auth, JWT_SECRET);
+    console.log(payload);
     if (payload.role !== 'admin') throw new Error();
     next();
   } catch {

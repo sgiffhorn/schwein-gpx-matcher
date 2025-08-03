@@ -11,7 +11,9 @@ import adminRouter from './routes/adminRoutes.js';
 import { loadReferencePoints } from './gpxService.js';
 import checkAuth from './middleware/checkAuth.js';
 import { around } from 'geokdbush';
-
+import cookieParser from 'cookie-parser';
+import bcrypt from 'bcrypt';
+console.log(await bcrypt.hash('asdlkj23schwein', 10));
 dotenv.config();
 let refPoints, refIndex;
 async function start() {
@@ -47,15 +49,11 @@ async function start() {
 
     const app = express();
     app.use(express.json());
+    app.use(cookieParser());
 
     // Make both available to your routes
     app.locals.refPoints = refPoints;
     app.locals.refIndex = refIndex;
-
-    // 2) Serve static frontend
-    const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    app.use(express.static(path.join(__dirname, '..', 'public')));
-
 
     // 4) Mount routers
     app.use('/auth', authRouter);

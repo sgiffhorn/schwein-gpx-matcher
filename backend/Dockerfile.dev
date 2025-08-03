@@ -1,0 +1,21 @@
+# backend/Dockerfile.dev
+
+FROM node:18-alpine
+
+WORKDIR /usr/src/app
+
+# 1) Install deps
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# 2) Copy source
+COPY . .
+
+# 3) Make sure nodemon is available
+RUN npm install --no-save nodemon
+
+# 4) Expose your port
+EXPOSE 3000
+
+# 5) Launch with watch mode
+CMD ["npx", "nodemon", "--watch", "src", "--exec", "node", "src/index.js"]
