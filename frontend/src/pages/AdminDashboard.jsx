@@ -147,9 +147,10 @@ export default function AdminDashboard() {
                 {String(Math.floor((r.moving_time_seconds % 3600) / 60)).padStart(2, '0')}:
                 {String(r.moving_time_seconds % 60).padStart(2, '0')}
               </td>
-              {r.match_percentage != null
-          ? `${r.match_percentage.toFixed(1)} %`
-          : '—'}
+              {
+            r.match_percentage != null
+              ? `${parseFloat(r.match_percentage).toFixed(1)} %`
+              : '—'}
               <td style={{ whiteSpace: 'pre-wrap' }}>
                 {r.internal_comment || '—'}
               </td>

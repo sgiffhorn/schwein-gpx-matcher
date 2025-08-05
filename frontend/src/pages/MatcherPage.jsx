@@ -35,6 +35,11 @@ export default function MatcherPage() {
     setError(null);
   };
 
+  useEffect(() => {
+    setMatch(null);
+    setError(null);
+  }, [tab]);
+
   // match callbacks
   const handleMatch = data => {
     setError(null);
