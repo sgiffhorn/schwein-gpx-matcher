@@ -1,8 +1,6 @@
 // src/index.js
 import express from 'express';
-import path from 'path';
 import KDBush from 'kdbush';
-import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import authRouter from './auth.js';
 import activityRouter from './routes/activityRoutes.js';
@@ -14,8 +12,9 @@ import { loadReferencePoints } from './gpxService.js';
 import checkAuth from './middleware/checkAuth.js';
 import { around } from 'geokdbush';
 import cookieParser from 'cookie-parser';
-import bcrypt from 'bcrypt';
-console.log(await bcrypt.hash('asdlkj23schwein', 10));
+import { query } from './db.js';
+//import bcrypt from 'bcrypt';
+//console.log(await bcrypt.hash('asdlkj23schwein', 10));
 dotenv.config();
 let refPoints, refIndex;
 async function start() {
@@ -53,6 +52,30 @@ async function start() {
     app.use(express.json());
     app.use(cookieParser());
 
+    // ----------------------------
+    //  Ensure submissions table
+    // ----------------------------
+    await query(
+        `CREATE TABLE IF NOT EXISTS submissions (
+       id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+       name VARCHAR(255) NOT NULL,
+       activity_date DATE NOT NULL,
+       moving_time_seconds INT NOT NULL,
+       match_percentage DECIMAL(5,2) DEFAULT NULL,
+       frikadelle_image LONGBLOB DEFAULT NULL,
+       frikadelle_eaten TINYINT(1) NOT NULL DEFAULT 0,
+       internal_comment TEXT DEFAULT NULL,
+       external_comment TEXT DEFAULT NULL,
+       accepted TINYINT(1) NOT NULL DEFAULT 0,
+       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+     ) ENGINE=InnoDB
+       DEFAULT CHARSET=utf8mb4
+       COLLATE=utf8mb4_general_ci;`
+    );
+    console.log('✅ Ensured submissions table exists.');
+
+
     // Make both available to your routes
     app.locals.refPoints = refPoints;
     app.locals.refIndex = refIndex;
@@ -64,7 +87,7 @@ async function start() {
     app.use('/api/submission', submissionRouter);
     app.use('/api/admin', adminRouter);
     app.use('/api', checkAuth, activityRouter);
-    
+
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
         console.log(`Server listening on port ${PORT}`);
