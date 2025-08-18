@@ -13,7 +13,7 @@ export default function AdminLogin() {
     try {
       const res = await axios.post('/api/admin/login', { username, password });
       localStorage.setItem('adminToken', res.data.token);
-      navigate('/admin');
+      navigate('/admin/dashboard');
     } catch {
       setError('Login failed');
     }

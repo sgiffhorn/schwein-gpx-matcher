@@ -53,6 +53,7 @@ export default function StravaMatcher({ athleteId, onMatch, onError }) {
       onMatch({
         ...res.data,
         activityDate: act?.start_date || new Date().toISOString(),
+        stravaActivityId: act?.id,
       });
     } catch (e) {
       onError(e.response?.data || e);

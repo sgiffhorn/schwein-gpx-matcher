@@ -1,58 +1,35 @@
 // src/routes/fameRoutes.js
 import express from 'express';
-import { query } from '../db.js';
+import { Submission } from '../models/index.js';
+
 const router = express.Router();
 
+const FAST_TIME_SEC = 11 * 3600 + 30 * 60; // 11:30:00
+function medalFrom(r) {
+  if (r.medal_override && r.medal_override !== 'none') return r.medal_override;
+  const fast = r.moving_time_seconds < FAST_TIME_SEC;
+  if (fast && r.frikadelle_eaten) return 'gold';
+  if (fast || r.frikadelle_eaten) return 'silver';
+  return 'bronze';
+}
+
 router.get('/', async (req, res) => {
-  // only show accepted submissions
-  const rows = await query(`
-    SELECT name,
-           activity_date,
-           moving_time_seconds,
-           match_percentage,
-           frikadelle_eaten,
-           external_comment
-      FROM submissions
-     WHERE accepted = 1
-     ORDER BY activity_date ASC
-  `);
-
-  const SILVER_SEC = 11 * 3600 + 30 * 60;  // 11:30 in seconds
-
-  const data = rows.map(r => {
-    // medal logic
-    let medal = 'Bronze';
-    if (r.moving_time_seconds < SILVER_SEC || r.frikadelle_eaten) medal = 'Silver';
-    if (r.moving_time_seconds < SILVER_SEC && r.frikadelle_eaten) medal = 'Gold';
-
-    // format date DD.MM.YYYY
-    const d = new Date(r.activity_date);
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth()+1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    const date = `${dd}.${mm}.${yyyy}`;
-
-    // format moving time HH:MM:SS
-    let secs = r.moving_time_seconds;
-    const h = Math.floor(secs/3600); secs %= 3600;
-    const m = Math.floor(secs/60);    secs %= 60;
-    const s = secs;
-    const movingTime = `${h>0?h+':':''}${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-
-    return {
-      name:            r.name,
-      date,
-      dateRaw: d.toISOString(),
-      movingTime,
-      matchPercentage: r.match_percentage != null
-                       ? parseFloat(r.match_percentage)
-                       : null,
-      medal,
-      externalComment: r.external_comment || ''
-    };
+  const rows = await Submission.findAll({
+    where: { accepted: true },
+    order: [['activity_date', 'DESC'], ['created_at', 'DESC']]
   });
 
-  res.json(data);
+  const out = rows.map(r => ({
+    id: r.id,
+    name: r.name,
+    activityDate: r.activity_date,                   // 'YYYY-MM-DD' (DATEONLY)
+    movingTimeSeconds: r.moving_time_seconds,
+    matchPercentage: r.match_percentage,             // number|null thanks to getter
+    medal: medalFrom(r),
+    externalComment: r.external_comment ?? '',
+  }));
+
+  res.json(out);
 });
 
 export default router;
