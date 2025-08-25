@@ -51,52 +51,56 @@ export default function MatcherPage() {
   };
 
   return (
-    <div style={{ padding: '1rem', maxWidth: 800, margin: '0 auto' }}>
-      <h1>Submit Your Ride</h1>
+  <div className="container">
+    <h1 style={{ marginBottom: '1rem' }}>Fahrt einreichen</h1>
 
-          <div style={{ marginBottom: '1rem' }}>
-            {athleteId ? (
-              <button onClick={handleDisconnect} style={{ float: 'right' }}>
-                Disconnect Strava
-              </button>
-            ) : null}
-            <Tabs
-              tabs={[
-                { id: 'strava', label: 'Strava', disabled: false },
-                { id: 'gpx',    label: 'Upload GPX' },
-              ]}
-              activeTab={tab}
-              onChange={setTab}
-            />
-          </div>
+    <div className="card" style={{ marginBottom: '1rem' }}>
+      <div className="card-body">
+        {athleteId ? (
+          <button className="btn btn-ghost" onClick={handleDisconnect} style={{ float: 'right' }}>
+            Disconnect Strava
+          </button>
+        ) : null}
 
-          {error && <p style={{ color: 'red' }}>{error}</p>}
-
-          {tab === 'strava' ? (
-            athleteId
-              ? <StravaMatcher
-                  athleteId={athleteId}
-                  onMatch={handleMatch}
-                  onError={handleError}
-                />
-              : <button onClick={() => window.location.href = '/auth/login'}>
-                  Connect with Strava
-                </button>
-          ) : (
-            <GPXMatcher
-              onMatch={handleMatch}
-              onError={handleError}
-            />
-          )}
-
-      {matchData && (
-        <SubmissionForm
-          initial={matchData}
-          referenceTrack={matchData.referenceTrack}
-          activityTrack={matchData.activityTrack}
-          onCancel={() => setMatch(null)}
+        <Tabs
+          tabs={[
+            { id: 'strava', label: 'Strava', disabled: false },
+            { id: 'gpx',    label: 'Upload GPX' },
+          ]}
+          activeTab={tab}
+          onChange={setTab}
         />
-      )}
+
+        {error && <p style={{ color: 'var(--danger)', marginTop: '.75rem' }}>{error}</p>}
+
+        <div style={{ marginTop: '1rem' }}>
+          {tab === 'strava' ? (
+            athleteId ? (
+              <StravaMatcher athleteId={athleteId} onMatch={handleMatch} onError={handleError} />
+            ) : (
+              <button className="btn btn-primary" onClick={() => (window.location.href = '/auth/login')}>
+                Mit Strava verbinden
+              </button>
+            )
+          ) : (
+            <GPXMatcher onMatch={handleMatch} onError={handleError} />
+          )}
+        </div>
+      </div>
     </div>
-  );
+
+    {matchData && (
+      <div className="card">
+        <div className="card-body">
+          <SubmissionForm
+            initial={matchData}
+            referenceTrack={matchData.referenceTrack}
+            activityTrack={matchData.activityTrack}
+            onCancel={() => setMatch(null)}
+          />
+        </div>
+      </div>
+    )}
+  </div>
+);
 }

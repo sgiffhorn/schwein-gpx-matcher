@@ -43,7 +43,7 @@ function normalizeMedal(val) {
 }
 function MedalCell({ value }) {
   const m = normalizeMedal(value);
-  if (m === 'gold')   return <span title="Gold">🥇</span>;
+  if (m === 'gold') return <span title="Gold">🥇</span>;
   if (m === 'silver') return <span title="Silver">🥈</span>;
   if (m === 'bronze') return <span title="Bronze">🥉</span>;
   return <span>–</span>;
@@ -139,15 +139,15 @@ export default function FamePage() {
   }, [filter, setGlobalFilter]);
 
   return (
-    <div style={{ padding: '1rem' }}>
+    <div className="container">
       <h1>Hall of Fame</h1>
       <input
-        placeholder="Search..."
+        className="search"
+        placeholder="Suche…"
         value={filter}
         onChange={e => setFilter(e.target.value)}
-        style={{ marginBottom: '1rem', width: '100%', padding: '0.5rem' }}
       />
-      <table {...getTableProps()} style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <table {...getTableProps()} className="table">
         <thead>
           {headerGroups.map(hg => {
             const { key, ...trProps } = hg.getHeaderGroupProps();

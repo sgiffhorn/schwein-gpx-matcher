@@ -147,8 +147,10 @@ export default function SubmissionForm({
   const secondOptions = Array.from({ length: 60 }, (_, i) => i);
 
   return (
-    <div style={{ maxWidth: 700, margin: '0 auto' }}>
-      {canShowMap && bounds && (
+    <div>
+    {canShowMap && bounds && (
+      <div className="card" style={{ marginBottom: '1rem' }}>
+        <div className="card-body">
         <MapContainer bounds={bounds} scrollWheelZoom={false} style={{ height: 300, marginBottom: '1rem', position: 'relative' }}>
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -158,14 +160,19 @@ export default function SubmissionForm({
           <Polyline positions={actCoords} color="red" />
           <LegendControl />
         </MapContainer>
+        </div>
+      </div>
       )}
 
       {/* summary line */}
-      <div style={{ marginBottom: '0.75rem', fontSize: '0.95rem', fontWeight: 500, textAlign: 'center' }}>
+      <div className="card" style={{ marginBottom: '1rem' }}>
+      <div className="card-body" style={{ textAlign: 'center', fontWeight: 600 }}>
         <strong>Date:</strong> {formatDate(effectiveDate)} &nbsp;|&nbsp;
         <strong>Time:</strong> {timeOk ? formatTime(effectiveSecs) : '—'} &nbsp;|&nbsp;
         <strong>Match:</strong> {matchPct != null ? `${matchPct.toFixed(1)}%` : '—'}
       </div>
+    </div>
+
 
       {/* if date or time is missing, show inputs to capture them */}
       {(!hasInitialDate || !hasInitialTime) && (
@@ -214,15 +221,7 @@ export default function SubmissionForm({
         </div>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '160px 1fr',
-          gap: '0.75rem 1rem',
-          alignItems: 'center'
-        }}
-      >
+      <form onSubmit={handleSubmit} className="form-grid">
         <label style={{ justifySelf: 'end' }}>Name</label>
         <input
           type="text"
@@ -263,12 +262,12 @@ export default function SubmissionForm({
         </div>
 
         <div></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-          <button type="button" onClick={onCancel}>Cancel</button>
-          <button type="submit" disabled={!canSubmit}>
-            Create Submission
-          </button>
-        </div>
+      <div style={{ display: 'flex', gap: '.5rem', justifyContent: 'space-between', marginTop: '.5rem' }}>
+        <button type="button" className="btn" onClick={onCancel}>Abbrechen</button>
+        <button type="submit" className="btn btn-primary" disabled={typeof matchPct === 'number' && matchPct < minPct}>
+          Einreichen
+        </button>
+      </div>
       </form>
     </div>
   );
