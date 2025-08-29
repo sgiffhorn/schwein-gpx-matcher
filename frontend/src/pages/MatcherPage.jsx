@@ -4,6 +4,7 @@ import StravaMatcher from '../components/StravaMatcher.jsx';
 import GPXMatcher    from '../components/GPXMatcher.jsx';
 import Tabs          from '../components/Tabs.jsx';
 import SubmissionForm from '../components/SubmissionForm.jsx';
+import { Link } from 'react-router-dom'; 
 
 export default function MatcherPage() {
   const [tab, setTab]           = useState('strava');
@@ -26,15 +27,6 @@ export default function MatcherPage() {
       });
   }, []);
 
-  // Disconnect handler
-  const handleDisconnect = async () => {
-    await axios.post('/auth/logout', { athleteId });
-    localStorage.removeItem('athleteId');
-    setAthlete(null);
-    setMatch(null);
-    setError(null);
-  };
-
   useEffect(() => {
     setMatch(null);
     setError(null);
@@ -52,16 +44,15 @@ export default function MatcherPage() {
 
   return (
   <div className="container">
-    <h1 style={{ marginBottom: '1rem' }}>Fahrt einreichen</h1>
+    <div className="page-header">
+        <h1>Submit Your Ride</h1>
+        <Link to="/fame" className="btn btn-primary">
+          Back to Hall of Fame
+        </Link>
+      </div>
 
     <div className="card" style={{ marginBottom: '1rem' }}>
       <div className="card-body">
-        {athleteId ? (
-          <button className="btn btn-ghost" onClick={handleDisconnect} style={{ float: 'right' }}>
-            Disconnect Strava
-          </button>
-        ) : null}
-
         <Tabs
           tabs={[
             { id: 'strava', label: 'Strava', disabled: false },

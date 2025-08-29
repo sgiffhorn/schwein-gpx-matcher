@@ -40,7 +40,7 @@ router.get('/callback', async (req, res) => {
                 // secure: true,       // ← on prod with HTTPS
                 maxAge: (expires_at - Math.floor(Date.now() / 1000)) * 1000
             })
-            .redirect(FE);         // no more `?athleteId=…`
+            .redirect(FE+"/match");         // no more `?athleteId=…`
     } catch (e) {
         console.error(e.response?.data || e.message);
         res.status(500).send('Auth failed');

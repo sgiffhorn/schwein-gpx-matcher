@@ -25,6 +25,15 @@ export default function StravaMatcher({ athleteId, onMatch, onError }) {
     setMonth(new Date().getMonth() + 1);
   }, []);
 
+  // Disconnect handler
+    const handleDisconnect = async () => {
+      await axios.post('/auth/logout', { athleteId });
+      localStorage.removeItem('athleteId');
+      setAthlete(null);
+      setMatch(null);
+      setError(null);
+    };
+
   const loadActivities = async () => {
     if (!year || !month) return;
     setLA(true);
@@ -74,7 +83,7 @@ export default function StravaMatcher({ athleteId, onMatch, onError }) {
             <option key={m.value} value={m.value}>{m.label}</option>
           ))}
         </select>
-        <button onClick={loadActivities} disabled={loadingActs}>
+        <button className="btn btn-secondary" onClick={loadActivities} disabled={loadingActs}>
           {loadingActs ? 'Loading…' : 'Load Rides'}
         </button>
       </div>
@@ -91,6 +100,11 @@ export default function StravaMatcher({ athleteId, onMatch, onError }) {
           </select>
         </div>
       )}
+      {athleteId ? (
+          <button className="btn btn-secondary" onClick={handleDisconnect}>
+            Disconnect Strava
+          </button>
+        ) : null}
 
       {loadingMatch && <p>Matching…</p>}
     </div>

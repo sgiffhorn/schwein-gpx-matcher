@@ -2,7 +2,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useTable, useSortBy, useGlobalFilter } from 'react-table';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 
+/* ---------- helpers (unchanged) ---------- */
 function formatDDMMYYYY(d) {
   if (!(d instanceof Date) || isNaN(d)) return '';
   const dd = String(d.getDate()).padStart(2, '0');
@@ -39,16 +41,24 @@ function normalizeMedal(val) {
   if (s.includes('gold') || s.includes('gouden') || s.includes('🥇')) return 'gold';
   if (s.includes('silver') || s.includes('zilveren') || s.includes('🥈')) return 'silver';
   if (s.includes('bronze') || s.includes('bronzen') || s.includes('🥉')) return 'bronze';
+  if (s.includes('none')) return 'none';
   return null;
 }
+
+/* Medal chip (styled via CSS: .medal, .medal.gold/.silver/.bronze) */
 function MedalCell({ value }) {
   const m = normalizeMedal(value);
-  if (m === 'gold') return <span title="Gold">🥇</span>;
-  if (m === 'silver') return <span title="Silver">🥈</span>;
-  if (m === 'bronze') return <span title="Bronze">🥉</span>;
-  return <span>–</span>;
+  if (!m || m === 'none') return <span>–</span>;
+  const label = m[0].toUpperCase() + m.slice(1);
+  return (
+    <span className={`medal ${m}`} title={label}>
+      <span className="dot" />
+      {label}
+    </span>
+  );
 }
 
+/* ---------- page ---------- */
 export default function FamePage() {
   const [data, setData] = useState([]);
   const [filter, setFilter] = useState('');
@@ -92,17 +102,24 @@ export default function FamePage() {
       Header: 'Date',
       accessor: '_dateObj',
       Cell: ({ row }) => row.original.date,
-      sortType: 'datetime'
+      sortType: 'datetime',
+      className: 'fame-col-date'
     },
     {
       Header: 'Name',
-      accessor: 'name'
+      accessor: 'name',
+      className: 'fame-col-name'
     },
     {
       Header: 'Time',
       accessor: 'movingSeconds',
       Cell: ({ row }) => row.original.movingTimeDisplay,
-      sortType: 'basic' // numeric sort on movingSeconds
+      sortType: (a, b) => {
+        const va = a.values.movingSeconds ?? Number.POSITIVE_INFINITY;
+        const vb = b.values.movingSeconds ?? Number.POSITIVE_INFINITY;
+        return va - vb;
+      },
+      className: 'fame-col-time'
     },
     {
       Header: 'Match %',
@@ -111,17 +128,20 @@ export default function FamePage() {
       sortType: (a, b, id) => {
         const va = a.values[id] ?? -Infinity;
         const vb = b.values[id] ?? -Infinity;
-        return (va > vb) ? 1 : (va < vb) ? -1 : 0;
-      }
+        return va - vb;
+      },
+      className: 'fame-col-match'
     },
     {
       Header: 'Medal',
       accessor: 'medal',
-      Cell: MedalCell
+      Cell: MedalCell,
+      className: 'fame-col-medal'
     },
     {
       Header: 'Comment',
-      accessor: 'externalComment'
+      accessor: 'externalComment',
+      className: 'fame-col-comment'
     }
   ], []);
 
@@ -140,14 +160,22 @@ export default function FamePage() {
 
   return (
     <div className="container">
-      <h1>Hall of Fame</h1>
+      <div className="page-header">
+        <h1>Hall of Fame</h1>
+        <Link to="/match" className="btn btn-primary">
+          Submit your ride
+        </Link>
+      </div>
+
       <input
         className="search"
         placeholder="Suche…"
         value={filter}
         onChange={e => setFilter(e.target.value)}
+        style={{ marginBottom: '1rem', width: '100%', padding: '0.5rem' }}
       />
-      <table {...getTableProps()} className="table">
+
+      <table {...getTableProps()} className="table fame-table">
         <thead>
           {headerGroups.map(hg => {
             const { key, ...trProps } = hg.getHeaderGroupProps();
@@ -155,19 +183,12 @@ export default function FamePage() {
               <tr key={key} {...trProps}>
                 {hg.headers.map(col => {
                   const thProps = col.getHeaderProps(col.getSortByToggleProps());
-                  const { key: thKey, ...restTh } = thProps;
+                  const { key: thKey, className, ...restTh } = thProps;
                   return (
                     <th
                       key={thKey}
                       {...restTh}
-                      style={{
-                        borderBottom: '1px solid #000',
-                        padding: '0.5rem',
-                        cursor: 'pointer',
-                        userSelect: 'none',
-                        textAlign:
-                          col.Header === 'Match %' || col.Header === 'Time' ? 'right' : 'left'
-                      }}
+                      className={['th', col.className, className].filter(Boolean).join(' ')}
                     >
                       {col.render('Header')}
                       <span>{col.isSorted ? (col.isSortedDesc ? ' 🔽' : ' 🔼') : ''}</span>
@@ -178,6 +199,7 @@ export default function FamePage() {
             );
           })}
         </thead>
+
         <tbody {...getTableBodyProps()}>
           {rows.map(row => {
             prepareRow(row);
@@ -185,19 +207,12 @@ export default function FamePage() {
             return (
               <tr key={key} {...rowProps}>
                 {row.cells.map(cell => {
-                  const { key: tdKey, ...tdProps } = cell.getCellProps();
+                  const { key: tdKey, className, ...tdProps } = cell.getCellProps();
                   return (
                     <td
                       key={tdKey}
                       {...tdProps}
-                      style={{
-                        padding: '0.5rem',
-                        borderBottom: '1px solid #eee',
-                        textAlign:
-                          cell.column.Header === 'Match %' || cell.column.Header === 'Time'
-                            ? 'right'
-                            : 'left'
-                      }}
+                      className={['td', cell.column.className, className].filter(Boolean).join(' ')}
                     >
                       {cell.render('Cell')}
                     </td>

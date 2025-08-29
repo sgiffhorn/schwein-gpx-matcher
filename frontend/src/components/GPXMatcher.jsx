@@ -35,14 +35,14 @@ export default function GPXMatcher({ onMatch, onError }) {
   }
 
   return (
-    <div>
+    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
       <input
         ref={inputRef}
         type="file"
         accept=".gpx,application/gpx+xml"
         onChange={(e) => setFile(e.target.files?.[0] || null)}
       />
-      <button disabled={!file || busy} onClick={submit}>
+      <button className="btn btn-secondary" disabled={!file || busy} onClick={submit}>
         {busy ? 'Matching…' : 'Match GPX'}
       </button>
     </div>
